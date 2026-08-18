@@ -1,122 +1,173 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect, useMemo } from 'react';
+import type { Article, FilterCriteria } from './types';
+import { fetchArticles, updateArticle } from './services/storage'; // <-- Agrega updateArticle
+import { FilterBar } from './components/FilterBar';
+import { ArticleCard } from './components/ArticleCard';
+import { ArticleEditForm } from './components/ArticleEditForm'; // <-- Agrega esta línea
+import './App.css';
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean> (true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
 
+  const [filters, setFilters] = useState<FilterCriteria>({
+    search: '',
+    section: '',
+    status: '',
+    sortBy: 'date'
+  });
+
+  useEffect(() =>{
+    let isMounted = true;
+
+    const loadData = async () => {
+      try{
+        setIsLoading(true);
+        const data = await fetchArticles();
+        if(isMounted){
+          setArticles(data);
+          setError(null);
+        }
+      } catch(err){
+        if(isMounted){
+          setError(err instanceof Error ? err.message : "An unknown error ocurred");
+        }
+      } finally{
+        if(isMounted){
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Derived Data
+  // I used useMemo because it allows me to recalculate automatically the filtered list just when necessary
+  // speeding up the app
+
+  const handleSaveArticle = async (updatedArticle: Article) => {
+    const savedArticle = await updateArticle(updatedArticle);
+
+    setArticles(prevArticles =>
+      prevArticles.map(art => art.id === savedArticle.id ? savedArticle : art)
+    );
+
+    setSelectedArticleId(null);
+    alert("Article saved successfully!");
+  };
+
+
+  const availableStatuses = useMemo(() => {
+    return Array.from(new Set(articles.map(a => a.status)));
+  }, [articles]);
+
+  const availableSections = useMemo(() => {
+    return Array.from(new Set(articles.map(a => a.section)));
+  }, [articles]);
+
+  const filteredAndSortedArticles = useMemo(() => {
+    let result = [...articles];
+
+    if(filters.search){
+      const lowerSearch = filters.search.toLowerCase();
+      result = result.filter(
+        a => a.title.toLowerCase().includes(lowerSearch) ||
+             a.author.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    if(filters.section){
+      result = result.filter(a => a.section === filters.section);
+    }
+
+    if(filters.status){
+      result = result.filter(a => a.status === filters.status);
+    }
+
+    result.sort((a, b) => {
+      if(filters.sortBy === 'title'){
+        return a.title.localeCompare(b.title);
+      }
+      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+
+      return dateB - dateA;
+    });
+
+    return result;
+  }, [articles, filters]); // Recalculate if articles or filters change
+
+  if(isLoading)
+      return <div className="loading-state"> Loading articles...</div>;
+  if(error)
+      return <div className="error-state">Error: {error}</div>
+
+  if (selectedArticleId) {
+    const articleToEdit = articles.find(a => a.id === selectedArticleId);
+
+    if (!articleToEdit) {
+      return (
+        <div className="error-state">
+          <h2>Article not found</h2>
+          <button onClick={() => setSelectedArticleId(null)}>Return to List</button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="app-container">
+        <ArticleEditForm
+          article={articleToEdit}
+          onSave={handleSaveArticle}
+          onCancel={() => setSelectedArticleId(null)}
+        />
+      </div>
+    );
+  }
+
+  // RENDERING
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-container">
+      <header>
+        <h1>Article Review App</h1>
+      </header>
 
-      <div className="ticks"></div>
+      <main>
+        <FilterBar
+          filters={filters}
+          setFilters={setFilters}
+          availableSections={availableSections}
+          availableStatuses={availableStatuses}
+        />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <p className="results-count">
+          Showing {filteredAndSortedArticles.length} of {articles.length} articles
+        </p>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {filteredAndSortedArticles.length === 0 ? (
+          <div className="empty-state">No articles match your criteria.</div>
+        ) : (
+          <div className="articles-grid">
+            {filteredAndSortedArticles.map(article => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                onSelect={setSelectedArticleId}
+              />
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
 
 export default App

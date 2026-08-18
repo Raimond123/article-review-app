@@ -1,4 +1,4 @@
-import { Article } from '../types';
+import type { Article } from '../types';
 import initialData from '../data/initialArticles.json';
 
 const storage_key = 'article_review_data';
@@ -20,8 +20,8 @@ export const fetchArticles = async (): Promise<Article[]> => {
         throw new Error("Failed to load articles");
 
     try{
-        const parsedData = JSON.parse(data) as unknown;
-        return parsedData as Article[];
+        const parsedData = JSON.parse(data) as Article[];
+        return parsedData;
     } catch(error){
         throw new Error("Data is malformed");
     }
