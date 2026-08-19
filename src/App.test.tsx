@@ -46,7 +46,7 @@ describe('Article Review App Requirements', () => {
     expect(screen.getByText('Advanced CSS')).toBeInTheDocument();
   });
 
-  // Test 2: Missing-article behavior (Empty State)
+  // Test 2: Empty filter results behavior
   it('2. displays an empty state message when no articles match the filters', async () => {
     render(<App />);
     expect(await screen.findByText('React Testing Guide')).toBeInTheDocument();
@@ -118,5 +118,4 @@ describe('Article Review App Requirements', () => {
       }));
     });
   });
-
 });
