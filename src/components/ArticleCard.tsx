@@ -14,7 +14,7 @@ export function ArticleCard({article, onSelect} : ArticleCardProps){
             <div className='article-meta'>
                 <span className='author'>By {article.author}</span>
                 <span className='section'>Section: {article.section} </span>
-                <span className={'status-badge ${article.status'}>{article.status}</span>
+                <span className={`status-badge ${article.status}`}>{article.status}</span>
             </div>
             <p className="summary">{article.summary}</p>
             <p className='date'><small>Date: {formattedDate}</small></p>

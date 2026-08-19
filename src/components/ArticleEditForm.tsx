@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Article, ArticleStatus } from '../types';
+import type { Article } from '../types';
 
 interface ArticleEditFormProps {
   article: Article;
